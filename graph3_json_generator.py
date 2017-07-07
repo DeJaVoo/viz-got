@@ -2,9 +2,6 @@ import json
 import math
 import pandas as pd
 
-df = pd.read_csv('db.csv')
-
-
 def get_nested_rec(key, grp):
     """
     get nested record
@@ -66,12 +63,18 @@ def get_nested_rec(key, grp):
     return root
 
 
-records = []
-for key, group in df.groupby(['Allegiances']):
-    if not key == 'None':
-        rec = get_nested_rec(key, group)
-        records.append(rec)
+def main():
+    df = pd.read_csv('db.csv')
+    records = []
+    for key, group in df.groupby(['Allegiances']):
+        if not key == 'None':
+            rec = get_nested_rec(key, group)
+            records.append(rec)
 
-records = dict(data=records)
+    records = dict(data=records)
 
-print(json.dumps(records, indent=2))
+    print(json.dumps(records, indent=2))
+
+
+if __name__ == "__main__":
+    main()
