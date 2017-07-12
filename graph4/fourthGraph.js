@@ -139,7 +139,7 @@ function drawGraph(data) {
 
 
 function main() {
-  d3.csv("db.csv", function(error, orignalData) {
+  d3.csv("\viz-got\db.csv", function(error, orignalData) {
     if (error) throw error;
     var data = processData(orignalData);
     drawGraph(data);
