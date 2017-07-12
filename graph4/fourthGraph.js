@@ -139,7 +139,7 @@ function drawGraph(data) {
 
 
 function main() {
-  d3.csv("dejavoo.github.io/viz-got/csv.db", function(error, orignalData) {
+  d3.csv("dejavoo.github.io/viz-got/db.csv", function(error, orignalData) {
     if (error) throw error;
     var data = processData(orignalData);
     drawGraph(data);
