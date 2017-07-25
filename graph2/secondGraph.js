@@ -1,16 +1,124 @@
+function incrementDeath(deathList, deathBook, deathChapter) {
+  if (deathList[deathBook] === undefined) {
+    deathList[deathBook] = [];
+  }
+  if (deathList[deathBook][deathChapter] === undefined) {
+    deathList[deathBook][deathChapter] = 0;
+  }
+  deathList[deathBook][deathChapter]++;
+}
+
+function newDeathMap(data) {
+  deathMap = {
+    total: []
+  };
+  data.forEach(function(d) {
+    if (!isValid(d.DeathBook) || !isValid(d.DeathChapter)) {
+      return;
+    }
+    deathBook = parseInt(d.DeathBook, 10);
+    deathChapter = parseInt(d.DeathChapter, 10);
+    if (isNaN(deathChapter) || isNaN(deathBook)) {
+      return;
+    }
+
+    if (!(d.Allegiances in deathMap)) {
+      deathMap[d.Allegiances] = [];
+    }
+
+    incrementDeath(deathMap["total"], deathBook, deathChapter);
+    incrementDeath(deathMap[d.Allegiances], deathBook, deathChapter);
+  });
+  return deathMap;
+}
+
+function drawDots(svg, graph, x, y ,z, toopTipDiv) {
+  svg.selectAll(".dot")
+    .remove();
+
+  svg.selectAll(".dot")
+    .data(graph)
+    .enter().append("circle")
+    .attr("class", "dot")
+    .attr("r", 3.5)
+    .attr("fill", function(d) {
+      return z(d.z)
+    })
+    .attr("cx", function(d) {
+      return x(d.x);
+    })
+    .attr("cy", function(d) {
+      return y(d.y);
+    })
+    .on("mouseover", function(d) {
+      toopTipDiv.transition()
+        .duration(200)
+        .style("opacity", .9);
+      toopTipDiv.html("Book: " + d.y + "<br/>" + "Chapter: " + d.x + "<br/>" + "Death Count: " + d.z)
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY - 28) + "px");
+    })
+    .on("mouseout", function(d) {
+      toopTipDiv.transition()
+        .duration(500)
+        .style("opacity", 0);
+    });
+}
+
+function newAllegianceList(data) {
+  map = {}
+  res = [];
+
+  data.forEach(function(d) {
+    if (!(d.Allegiances in map)) {
+      map[d.Allegiances] = true;
+      res.push(d.Allegiances);
+    }
+  });
+
+  return res;
+}
+
+
+function calcMaxDeath(deathList) {
+  maxDeath = 0;
+  for (i = 1; i < deathList.length; i++) {
+    var chapters = deathList[i];
+    for (var obj in chapters) {
+      //calculate max death
+      if (maxDeath < chapters[obj]) {
+        maxDeath = chapters[obj];
+      }
+    }
+  }
+  return maxDeath
+}
+
+function newGraphData(deathList) {
+  graph = [];
+  for (i = 1; i < deathList.length; i++) {
+    var chapters = deathList[i];
+    for (var obj in chapters) {
+      var element = {};
+      element.x = parseInt(obj, 10);
+      element.y = i;
+      element.z = chapters[obj];
+      graph.push(element);
+    }
+  }
+  return graph;
+}
+
 function processData(data) {
-  
+
   var res = {
     graph: [],
-    allegiances: [],
-    deathPerAllegiance: [],
-    maxDeath : 0
+    allegiances: newAllegianceList(data),
+    maxDeath: 0
   };
-  
-  deathPerAllegiance = [];
-  deathPerBookPerChapter = [];
 
-  
+  deathMap = newDeathMap(data);
+
   var maxChapter = -1;
   data.forEach(function(d) {
     if (!isNaN(d.DeathChapter) && d.DeathChapter > maxChapter) {
@@ -18,61 +126,13 @@ function processData(data) {
     }
   });
 
-  
-  data.forEach(function(d) {
-    if (!isValid(d.DeathBook) || !isValid(d.DeathChapter)) {
-      return;
-    }
-    var e = {};
-    e.y = parseInt(d.DeathBook, 10);
-    e.x = parseInt(d.DeathChapter, 10);
-    e.allegiances = d.Allegiances;
-    
-    // Calculate death per book per chapter
-    if (!isNaN(e.y) && !isNaN(e.x)) {
-      var deathCount = {};
-      if ((deathPerBookPerChapter[e.y] !== undefined) && (deathPerBookPerChapter[e.y][e.x] !== undefined)) 
-      {
-        deathPerBookPerChapter[e.y][e.x]++; 
-      }
-      else{
-        if(deathPerBookPerChapter[e.y] === undefined || (deathPerBookPerChapter[e.y] !== undefined && deathPerBookPerChapter[e.y][e.x] === undefined))
-        {
-          if(deathPerBookPerChapter[e.y] !== undefined){
-            deathPerBookPerChapter[e.y][e.x] = 1;
-          }
-          else{
-            deathCount[e.x] = 1;
-            deathPerBookPerChapter[e.y] = deathCount;
-          }
-        }
-      }
 
-    }
-    e.name = d.Name;
-    res.allegiances.push(e.allegiances);
-  });
-  
+
+  // deathList = deathMap["total"];
   // Add death counts
-  for(i = 1; i < deathPerBookPerChapter.length; i++)
-  {
-    var chapters = deathPerBookPerChapter[i];
-    for(var obj in chapters)
-    {
-      var element = {};
-      element.x = parseInt(obj, 10);
-      element.y = i;
-      element.z = chapters[obj];
-      
-      //calculate max death
-      if(res.maxDeath < element.z)
-      {
-        res.maxDeath = element.z;
-      }
-      res.graph.push(element);
-    }
-  }
-
+  res.maxDeath = calcMaxDeath(deathMap["total"]);
+  res.graph = newGraphData(deathMap["total"]);
+  res.deathMap = deathMap;
   return res;
 }
 
@@ -85,8 +145,9 @@ function drawGraph(data) {
   y.domain(calcAxisRange(data.graph, function(d) {
     return d.y;
   })).nice();
-  var z = d3.scale.linear().domain([0,data.maxDeath])
-  .range(["yellow", "blue"]);
+  var z = d3.scale.linear().domain([0, data.maxDeath])
+    .range(["yellow", "blue"]);
+
 
   /*
   define axes
@@ -122,14 +183,6 @@ function drawGraph(data) {
     .style("opacity", 0);
 
   var svg = newSvg(geometry);
-  
-  // Add title
-  svg.append("text")
-    .attr("x", geometry.width / 2 )
-    .attr("y", -3)
-    .attr("font-size", "16")
-    .style("text-anchor", "middle")
-    .text("Number of Deaths per Book per Chapter");
 
   /*
   add axes lines to the chart
@@ -156,49 +209,37 @@ function drawGraph(data) {
     .style("text-anchor", "end")
     .text("Book");
 
+  drawDots(svg, data.graph, x, y, z, div);
 
-  svg.selectAll(".dot")
-    .data(data.graph)
+  svg.selectAll(".data-legend")
+    .data(data.allegiances)
     .enter().append("circle")
-    .attr("class", "dot")
-    .attr("r", 3.5)
-    .attr("fill", function(d) {
-      return z(d.z)
+    .attr("data-legend", function(a) {
+      return a;
     })
-    .attr("cx", function(d) {
-      return x(d.x);
-    })
-    .attr("cy", function(d) {
-      return y(d.y);
-    })
-    .on("mouseover", function(d) {
-      div.transition()
-        .duration(200)
-        .style("opacity", .9);
-      div.html("Book: " + d.y + "<br/>" + "Chapter: " + d.x + "<br/>" + "Death Count: " + d.z)
-        .style("left", (d3.event.pageX) + "px")
-        .style("top", (d3.event.pageY - 28) + "px");
-    })
-    .on("mouseout", function(d) {
-      div.transition()
-        .duration(500)
-        .style("opacity", 0);
-    })
-    .attr("data-legend", function(d) {
-      return d.allegiances
-    });
-    
+    .attr("cx", 0)
+    .attr("cy", 0)
+    .style("visibility", "hidden");
+
+
+  var legend = svg.append("g")
+    .attr("class", "legend")
+    .attr("transform", "translate(905,30)")
+    .style("font-size", "12px");
+  // .call(d3.my_legend)
+
+  drawLegend(legend, data.allegiances, x, y, z, div, deathMap, svg);
 
   svg.append("g")
     .attr("class", "legendLinear")
     .attr("transform", "translate(200,430)");
-  
+
   var legendLinear = d3.legend.color()
     .shapeWidth(30)
-    .cells([0,1,2,3,4,5,6,7, 8,9,10,11,12])
+    .cells([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
     .orient('horizontal')
     .scale(z);
-  
+
   svg.select(".legendLinear")
     .call(legendLinear);
 }
