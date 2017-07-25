@@ -18,19 +18,12 @@ d3.json('db.json', function(data) {
     chart.yAxis
         .tickFormat(d3.format(',.2f'));
         
-  //chart.legend.vers('furious');
+  chart._options.controlOptions = ['Stacked', 'Expanded'];
   
   d3.select('#chart svg')
     .datum(data)
       .transition().duration(500).call(chart);
       
-  d3.select('#chart svg')
-  .append("text")
-  .attr("x", 750)             
-  .attr("y", 20)
-  .attr("text-anchor", "middle")  
-  .text("Strongest Allegiances");
-
     nv.utils.windowResize(chart.update);
 
     return chart;
