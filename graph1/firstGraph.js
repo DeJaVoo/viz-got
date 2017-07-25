@@ -1,6 +1,3 @@
-/** https://bl.ocks.org/mbostock/3887118 **/
-
-
 function processData(data) {
   var res = {
     graph: [],
