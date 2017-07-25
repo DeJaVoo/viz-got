@@ -1,3 +1,26 @@
+  function countChildren(d){
+    var values = ["A", "B"];
+    var found = false;
+    if(d.children) {
+        values = d.children;
+        found = true;
+    }else if(d._children){
+      values = d._children;
+      found = true;
+    }
+    if(found){
+      var res = 0;
+      for (var i = 0; i < values.length; i++) {
+        res = res + countChildren(values[i]);
+      }
+      return res;
+    }else if('depth' in d && d['depth'] !== 4){
+      return 0;
+    }else{
+      return 1;
+    }
+  }
+
 function main() {
   var geometry = newGeometry();
   
@@ -13,15 +36,11 @@ function main() {
   
   var svg = newSvg(geometry);
   
-    // Add title
-  svg.append("text")
-    .attr("x", geometry.width / 2 )
-    .attr("y", -3)
-    .attr("font-size", "16")
-    .attr("font-weight", "bold")
-    .style("text-anchor", "middle")
-    .text("Dead and Alive per allegiances");
-    
+  // Define the div for the tooltip
+  var toopTipDiv = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+  
   d3.json("db.json", function(error, allegiances) {
     if (error) throw error;
 
@@ -36,9 +55,10 @@ function main() {
         d.children = null;
       }
     }
+  
+  root.children.forEach(collapse);
+  update(root);
     
-    root.children.forEach(collapse);
-    update(root);
   });
   
   d3.select(self.frameElement).style("height", "800px");
@@ -60,7 +80,23 @@ function main() {
   var nodeEnter = node.enter().append("g")
       .attr("class", "node")
       .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-      .on("click", click);
+      .on("click", click)
+      
+  nodeEnter
+      .filter(function(d) {return d.depth != 4;}) 
+      .on("mouseover", function(d) {
+      toopTipDiv.transition()
+        .duration(200)
+        .style("opacity", .9);
+      toopTipDiv.html("Number of " + d.name + " characters: " + countChildren(d))
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY - 28) + "px");
+    })
+    .on("mouseout", function(d) {
+      toopTipDiv.transition()
+        .duration(500)
+        .style("opacity", 0);
+    });
 
   nodeEnter.append("circle")
       .attr("r", 1e-6)
@@ -130,16 +166,19 @@ function main() {
   });
 }
 
+
+
   // Toggle children on click.
   function click(d) {
-  if (d.children) {
-    d._children = d.children;
-    d.children = null;
-  } else {
-    d.children = d._children;
-    d._children = null;
-  }
-  update(d);
+    if (d.children) {
+      d._children = d.children;
+      d.children = null;
+    } else {
+      d.children = d._children;
+      d._children = null;
+    }
+    update(d);
+    countChildren(d);
 }
   
 }
