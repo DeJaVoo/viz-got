@@ -1,10 +1,6 @@
-from itertools import islice
+import json
 from sys import argv
 import pandas as pd
-import csv
-import math
-import numpy as np
-import json
 
 INTRO_INDEX = 0
 DEATH_INDEX = 1
@@ -22,6 +18,7 @@ total_chapters = sum(chapters_per_book[key] for key in chapters_per_book)
 
 
 def calc_uni_chapter(book_number, chapter_number):
+    """ calculate number of chapters"""
     res = chapter_number
     for i in range(0, book_number):
         res += chapters_per_book[i]
@@ -33,6 +30,7 @@ def is_valid_number(a):
 
 
 def build_life_line_list(rows):
+    """ build life expectency of row returns result as tuple of (intro_living, death_living, allegiance_name)"""
     res = []
     for row in rows[1:]:
         if not is_valid_number(row[CSV_INTRO_BOOK]) or not is_valid_number(row[CSV_INTRO_CHAPTER]):
@@ -57,6 +55,7 @@ def get_members(life_line_list, allegiance):
 
 
 def build_g5_values(life_line_list, allegiance):
+    """build values array each value is build as [chapter, living]"""
     res = []
     members = get_members(life_line_list, allegiance)
     for current_chapter in range(0, total_chapters):
@@ -71,6 +70,7 @@ def build_g5_values(life_line_list, allegiance):
 
 
 def get_allegiances_list(life_line_list):
+    """return allegiances list"""
     res = []
     for row in life_line_list:
         if not row[ALLEGIANCE_INDEX] in res:
@@ -79,6 +79,7 @@ def get_allegiances_list(life_line_list):
 
 
 def build_g5_data(life_line_list):
+    """build graph5 data in the following structures {\"key\": allegiance_name, \"values\": values_array"""
     res = []
     for allegiance in get_allegiances_list(life_line_list):
         res.append({"key": allegiance, "values": build_g5_values(life_line_list, allegiance)})
@@ -86,6 +87,7 @@ def build_g5_data(life_line_list):
 
 
 def calc_death_rate(life_line_list):
+    """ calculate death rate """
     counters = {}
     res = []
     allegiances = get_allegiances_list(life_line_list)
@@ -108,6 +110,7 @@ def calc_death_rate(life_line_list):
 
 
 def build_g6_data(life_line_list):
+    """build graph 6 data"""
     counters = {}
     res = []
     allegiances = get_allegiances_list(life_line_list)
@@ -129,36 +132,16 @@ def build_g6_data(life_line_list):
     return res
 
 
-def write_csv(output_path, text):
-    with open(output_path, "w") as file:
-        for line in text:
-            line = convert_data_to_string(line)
-            file.write(line)
-            file.write('\n')
-
-
-def convert_data_to_string(line):
-    line_str = ""
-    for value in line:
-        if line_str != "":
-            line_str += ","
-        if isinstance(value, float):
-            print(line)
-            print(line)
-        line_str += value
-    return line_str
-
-
 def read_csv(input_path):
     return pd.read_csv(input_path, sep=',', header=None).values
 
 
 def main():
     script, input_path, output_path = argv
-    v = read_csv(input_path)
-    life_line_list = build_life_line_list(v)
-    w = build_g6_data(life_line_list)
-    print(json.dumps(w))
+    db = read_csv(input_path)
+    life_line_list = build_life_line_list(db)
+    data = build_g6_data(life_line_list)
+    print(json.dumps(data))
 
 
 if __name__ == "__main__":
