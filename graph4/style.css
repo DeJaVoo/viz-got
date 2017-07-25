@@ -15,3 +15,7 @@
     border-radius: 8px;			
     pointer-events: none;	
 }
+
+h1 {
+    text-align:center;
+}
